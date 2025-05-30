@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>College Assistant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #9D8CFF;
+      --primary-light: #BFB5FF;
+      --primary-dark: #7B6FFF;
+      --background-color: #F8F7FF;
+      --text-color: #2D3748;
+      --text-light: #718096;
+      --white: #FFFFFF;
+      --shadow-color: rgba(157, 140, 255, 0.1);
+      --border-color: rgba(157, 140, 255, 0.2);
+      --chat-bg: #FFFFFF;
+      --input-border: #E2E8F0;
+      --sidebar-bg: #FFFFFF;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #9D8CFF;
+      --primary-light: #7B6FFF;
+      --primary-dark: #BFB5FF;
+      --background-color: #1A1B1E;
+      --text-color: #E2E8F0;
+      --text-light: #A0AEC0;
+      --white: #2D3748;
+      --shadow-color: rgba(0, 0, 0, 0.2);
+      --border-color: rgba(157, 140, 255, 0.3);
+      --chat-bg: #2D3748;
+      --input-border: #4A5568;
+      --sidebar-bg: #2D3748;
+    }
+
+    * { 
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      line-height: 1.5;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .chat-container {
+      position: fixed;
+      top: 16px;
+      left: 88px;
+      right: 88px;
+      bottom: auto;
+      height: calc(100vh - 100px);
+      margin: 0 auto;
+      padding: 0;
+      max-width: 800px;
+      background: var(--chat-bg);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s ease, left 0.3s ease;
+    }
+
+    .chat-header {
+      display: flex;
+      flex-direction: column;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--chat-bg);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+    }
+
+    .chat-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-header h1 i {
+      color: var(--primary-color);
+      font-size: 18px;
+    }
+
+    .chat-header .tagline {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 4px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+    }
+
+    .messages-wrapper {
+      flex: 1;
+      padding: 16px 24px;
+      background: transparent;
+      overflow-y: auto;
+      margin-bottom: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary-light) transparent;
+    }
+
+    .messages-wrapper::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .messages-wrapper::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .messages-wrapper::-webkit-scrollbar-thumb {
+      background: var(--primary-light);
+      border-radius: 3px;
+    }
+
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: slideIn 0.3s ease forwards;
+      position: relative;
+    }
+
+    .bot-msg { 
+      align-items: flex-start;
+      padding-left: 16px;
+    }
+
+    .user-msg { 
+      align-items: flex-end;
+      padding-right: 16px;
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      position: relative;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .bot-msg .message-bubble {
+      background: var(--background-color);
+      color: var(--text-color);
+      border-bottom-left-radius: 4px;
+    }
+
+    .user-msg .message-bubble {
+      background: var(--primary-color);
+      color: var(--white);
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .chat-message:hover .message-actions { 
+      opacity: 1;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--primary-color);
+      padding: 6px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .action-btn:hover { 
+      background-color: var(--shadow-color);
+      transform: translateY(-1px);
+    }
+
+    .input-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 88px;
+      right: 88px;
+      width: auto;
+      height: auto;
+      background: transparent;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+      transition: left 0.3s ease;
+    }
+
+    .input-bar-container {
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: transparent;
+    }
+
+    #userInput {
+      flex: 1;
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      outline: none;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      background: var(--chat-bg);
+      color: var(--text-color);
+      height: 44px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    #userInput::placeholder {
+      color: var(--text-light);
+    }
+
+    #userInput:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 4px rgba(157, 140, 255, 0.1);
+    }
+
+    #sendButton {
+      background: var(--primary-color);
+      border: none;
+      color: var(--white);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 10px 16px;
+      border-radius: 10px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 2px 4px rgba(157, 140, 255, 0.2);
+    }
+
+    #sendButton:disabled {
+      background: var(--text-light);
+      cursor: not-allowed;
+    }
+
+    #sendButton:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(157, 140, 255, 0.3);
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+      background: var(--background-color);
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+
+    .typing-indicator .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite;
+    }
+
+    pre code {
+      display: block;
+      padding: 16px;
+      background: var(--background-color);
+      border-radius: 8px;
+      white-space: pre-wrap;
+      font-family: 'Fira Code', monospace;
+      overflow-x: auto;
+      color: var(--text-color);
+      margin: 8px 0;
+      font-size: 13px;
+    }
+
+    .table {
+      color: var(--text-color);
+      background: var(--white);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .table th {
+      background: var(--background-color);
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 500;
+    }
+
+    .table td {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    @keyframes slideIn {
+      from { 
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes bounce {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-2px);
+      }
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 72px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0;
+      box-shadow: 1px 0 2px var(--shadow-color);
+      z-index: 1001;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    .sidebar:hover:not(.blocked) {
+      width: 240px;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(8px);
+    }
+
+    .sidebar.blocked {
+      width: 72px !important;
+    }
+
+    .nav-item {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      border-radius: 12px;
+      color: var(--text-light);
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      padding: 0 12px;
+    }
+
+    .sidebar:hover:not(.blocked) .nav-item {
+      width: 200px;
+      padding: 0 16px;
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+
+    .nav-item i {
+      font-size: 20px;
+      min-width: 24px;
+    }
+
+    .nav-item .nav-text {
+      margin-left: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateX(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .sidebar:hover:not(.blocked) .nav-item .nav-text {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .nav-item:hover {
+      background: var(--background-color);
+      color: var(--primary-color);
+    }
+
+    .nav-item.active {
+      background: var(--primary-color);
+      color: var(--white);
+    }
+
+    .dark-mode-toggle {
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+
+    .settings-item {
+      margin-bottom: 24px;
+    }
+
+    .bottom-nav-items {
+      margin-top: auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .sidebar:hover:not(.blocked) ~ .chat-container {
+      left: 256px;
+    }
+
+    .sidebar:hover:not(.blocked) ~ .input-bar {
+      left: 256px;
+    }
+
+    .kmit-logo {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px var(--shadow-color);
+      z-index: 1002;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    .kmit-logo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px var(--shadow-color);
+    }
+
+    .kmit-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      filter: brightness(1.1);
+    }
+
+    #micButton {
+      background: transparent;
+      border: none;
+      color: var(--text-light);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 10px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    #micButton:hover {
+      color: var(--primary-color);
+      background: var(--background-color);
+    }
+
+    #micButton.recording {
+      color: #FF4B4B;
+      animation: pulse 1.5s ease infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .secondary-sidebar {
+      position: fixed;
+      left: 72px;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 24px 0;
+      box-shadow: 1px 0 2px var(--shadow-color);
+      z-index: 1001;
+      transition: width 0.3s ease, background-color 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .secondary-sidebar.active {
+      width: 240px;
+    }
+
+    .secondary-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      margin-bottom: 16px;
+    }
+
+    .secondary-sidebar-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .close-secondary-sidebar {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-light);
+      padding: 6px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .close-secondary-sidebar:hover {
+      background-color: var(--shadow-color);
+      transform: translateY(-1px);
+    }
+
+    .secondary-sidebar-content {
+      flex: 1;
+      padding: 0 24px;
+      overflow-y: auto;
+    }
+
+    .mode-buttons {
+      display: flex;
+      gap: 8px;
+      margin-right: 12px;
+    }
+
+    .mode-button {
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid var(--primary-color);
+      background: transparent;
+      color: var(--primary-color);
+      white-space: nowrap;
+    }
+
+    .mode-button:hover, .mode-button.active {
+      background: var(--primary-color);
+      color: var(--white);
+    }
+
+    .mode-button i {
+      margin-right: 4px;
+      font-size: 11px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--primary-color);
+      color: var(--white);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1200;
+      font-size: 0.9rem;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.error {
+      background: #dc3545;
+    }
+  </style>
+</head>
+<body>
+  <div class="kmit-logo">
+    <img src="kmit.png" alt="KMIT Logo" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkludGVyLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmb250LXdlaWdodD0iNTAwIiBmaWxsPSIjOUQ4Q0ZGIj5LTUlUPC90ZXh0Pjwvc3ZnPg=='" />
+  </div>
+
+  <nav class="sidebar">
+    <div class="nav-item active">
+      <i class="fas fa-comments"></i>
+      <span class="nav-text">Chat History</span>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-bullhorn"></i>
+      <span class="nav-text">Bulletins</span>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-bell"></i>
+      <span class="nav-text">Exam Notifications</span>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-user-check"></i>
+      <span class="nav-text">Attendance</span>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-chart-bar"></i>
+      <span class="nav-text">Results</span>
+    </div>
+    <div class="nav-item">
+      <i class="fas fa-calendar-alt"></i>
+      <span class="nav-text">Timetables</span>
+    </div>
+    <div class="bottom-nav-items">
+      <div class="nav-item dark-mode-toggle" id="darkModeToggle">
+        <i class="fas fa-moon" id="themeIcon"></i>
+        <span class="nav-text">Dark Mode</span>
+      </div>
+      <div class="nav-item settings-item">
+        <i class="fas fa-cog"></i>
+        <span class="nav-text">Settings</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="secondary-sidebar">
+    <div class="secondary-sidebar-header">
+      <h2 class="secondary-sidebar-title">Chat History</h2>
+      <button class="close-secondary-sidebar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="secondary-sidebar-content">
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1><i class="fas fa-robot"></i> MITHRR</h1>
+      <div class="tagline">Powered by BotMinds</div>
+    </div>
+    <div id="chatWindow" class="messages-wrapper"></div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-bar-container">
+      <div class="mode-buttons">
+        <button class="mode-button" onclick="handleSubjectDoubts()">
+          <i class="fas fa-book"></i>Subject
+        </button>
+        <button class="mode-button" onclick="handleCodeDoubts()">
+          <i class="fas fa-code"></i>Code
+        </button>
+      </div>
+      <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" />
+      <button id="micButton" title="Voice Input"><i class="fas fa-microphone"></i></button>
+      <button id="sendButton">
+        Send
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    let currentMode = "kmit";
+    let ngrokurl = "";
+    let rawInput = "";
+    let isDeleting = false;
+    let isRecording = false;
+    let attendanceStep = 0;
+    let resultsStep = 0;
+    let timetableStep = 0;
+    let storedMobile = "";
+    let storedPassword = "";
+    let storedResultsMobile = "";
+    let storedResultsPassword = "";
+    let storedTimetableMobile = "";
+    let storedTimetablePassword = "";
+
+    const chatWindow = document.getElementById("chatWindow");
+    const userInput = document.getElementById("userInput");
+    const sendButton = document.getElementById("sendButton");
+    const micButton = document.getElementById("micButton");
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const htmlElement = document.documentElement;
+    const sidebar = document.querySelector('.sidebar');
+    const secondarySidebar = document.querySelector('.secondary-sidebar');
+    const closeSecondarySidebarBtn = document.querySelector('.close-secondary-sidebar');
+    const navItems = document.querySelectorAll('.nav-item');
+    const secondarySidebarTitle = document.querySelector('.secondary-sidebar-title');
+    const secondarySidebarContent = document.querySelector('.secondary-sidebar-content');
+
+    (async function setBackendUrl() {
+      try {
+        const response = await fetch("https://mithr-2b2e3-default-rtdb.firebaseio.com/ngrok_url.json");
+        const data = await response.json();
+        if (data && data.url) {
+          ngrokurl = data.url;
+          console.log("Dynamic backend URL:", ngrokurl);
+        } else {
+          throw new Error("Backend URL not found in Firebase.");
+        }
+      } catch (error) {
+        console.error("Error fetching backend URL:", error);
+      }
+    })();
+
+    function appendMessage(sender, message, isHTML = false) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `chat-message ${sender === "user" ? "user-msg" : "bot-msg"}`;
+      
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      if (isHTML) {
+        bubble.innerHTML = message;
+      } else {
+        bubble.textContent = message;
+      }
+      msgDiv.appendChild(bubble);
+
+      if (sender === "bot") {
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "message-actions";
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "action-btn copy-btn";
+        copyBtn.title = "Copy text";
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.addEventListener("click", () => { copyToClipboard(message, isHTML); });
+
+        const downloadBtn = document.createElement("button");
+        downloadBtn.className = "action-btn download-btn";
+        downloadBtn.title = "Download as TXT";
+        downloadBtn.innerHTML = '<i class="fas fa-download"></i>';
+        downloadBtn.addEventListener("click", () => { downloadResponse(message); });
+
+        const pdfBtn = document.createElement("button");
+        pdfBtn.className = "action-btn pdf-btn";
+        pdfBtn.title = "Download as PDF";
+        pdfBtn.innerHTML = '<i class="fas fa-file-pdf"></i>';
+        pdfBtn.addEventListener("click", () => { downloadResponseAsPDF(message, isHTML); });
+
+        actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(downloadBtn);
+        actionsDiv.appendChild(pdfBtn);
+        msgDiv.appendChild(actionsDiv);
+      }
+
+      chatWindow.appendChild(msgDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+
+      if (sender === "user") {
+        updateChatHistory(message);
+      }
+    }
+
+    function showTypingIndicator() {
+      const typingMessage = document.createElement("div");
+      typingMessage.className = "chat-message bot-msg";
+
+      const typingDiv = document.createElement("div");
+      typingDiv.className = "typing-indicator";
+      typingDiv.innerHTML = `
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      `;
+      typingMessage.appendChild(typingDiv);
+      
+      chatWindow.appendChild(typingMessage);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      return typingMessage;
+    }
+
+    function getResponseFileName(extension) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      return `chat-response-${year}${month}${day}-${hours}${minutes}${seconds}.${extension}`;
+    }
+
+    function stripHtmlTags(html) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = html;
+      return tempDiv.textContent || tempDiv.innerText || "";
+    }
+
+    async function copyToClipboard(message, isHTML) {
+      if (isHTML && navigator.clipboard && window.ClipboardItem) {
+        try {
+          const blobInput = new Blob([message], { type: 'text/html' });
+          const clipboardItem = new ClipboardItem({ 'text/html': blobInput });
+          await navigator.clipboard.write([clipboardItem]);
+          showToast("Copied HTML to clipboard!");
+          return;
+        } catch (err) {
+          console.warn("Could not copy HTML. Falling back to plain text...", err);
+        }
+      }
+      const plainText = isHTML ? stripHtmlTags(message) : message;
+      navigator.clipboard.writeText(plainText)
+        .then(() => showToast("Copied to clipboard!"))
+        .catch(err => {
+          console.error("Failed to copy!", err);
+          showToast("Failed to copy!", true);
+        });
+    }
+
+    function downloadResponse(text) {
+      const content = stripHtmlTags(text);
+      const fileName = getResponseFileName("txt");
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadResponseAsPDF(text, isHTML) {
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      container.style.padding = '20px';
+      container.style.backgroundColor = "#fff";
+      container.innerHTML = isHTML ? text : `<p>${text}</p>`;
+      document.body.appendChild(container);
+      html2canvas(container, { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const fileName = getResponseFileName("pdf");
+        pdf.save(fileName);
+        document.body.removeChild(container);
+        showToast("PDF downloaded successfully!");
+      }).catch(err => {
+        console.error("Error generating PDF", err);
+        document.body.removeChild(container);
+        showToast("Failed to generate PDF!", true);
+      });
+    }
+
+    function formatResponse(rawResponse) {
+      // Check for code blocks
+      if (rawResponse.includes("```")) {
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+        rawResponse = rawResponse.replace(codeBlockRegex, (match, language, code) => {
+          const langClass = language ? `language-${language}` : '';
+          return `<pre><code class="${langClass}">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        });
+      }
+      
+      // Process markdown
+      let formatted = marked.parse(rawResponse);
+      
+      // Make URLs clickable
+      formatted = formatted.replace(
+        /(\b(https?:\/\/|www\.)[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig,
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+      );
+      
+      return formatted;
+    }
+
+    function showToast(message, isError = false) {
+      let toast = document.querySelector(".toast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.className = "toast";
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      if (isError) {
+        toast.classList.add("error");
+      } else {
+        toast.classList.remove("error");
+      }
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3000);
+    }
+
+    async function handleSend() {
+      const typedValue = userInput.value.trim();
+      if (!typedValue) return;
+      if (!ngrokurl) {
+        appendMessage("bot", "Backend URL is still loading. Please try again shortly.");
+        return;
+      }
+
+      sendButton.disabled = true;
+
+      let userMessageText = typedValue;
+      if (attendanceStep === 2 || resultsStep === 2 || timetableStep === 2) {
+        userMessageText = "*".repeat(typedValue.length);
+      }
+      appendMessage("user", userMessageText);
+      userInput.value = "";
+
+      if (attendanceStep === 1) {
+        storedMobile = typedValue;
+        attendanceStep = 2;
+        userInput.type = "password";
+        appendMessage("bot", "Now enter your password:");
+        sendButton.disabled = false;
+        return;
+      } else if (attendanceStep === 2) {
+        storedPassword = typedValue;
+        attendanceStep = 0;
+        userInput.type = "text";
+        fetchAttendanceData(storedMobile, storedPassword);
+        sendButton.disabled = false;
+        return;
+      } else if (resultsStep === 1) {
+        storedResultsMobile = typedValue;
+        resultsStep = 2;
+        userInput.type = "password";
+        appendMessage("bot", "Now enter your password to fetch your results:");
+        sendButton.disabled = false;
+        return;
+      } else if (resultsStep === 2) {
+        storedResultsPassword = typedValue;
+        resultsStep = 0;
+        userInput.type = "text";
+        fetchResultsData(storedResultsMobile, storedResultsPassword);
+        sendButton.disabled = false;
+        return;
+      } else if (timetableStep === 1) {
+        storedTimetableMobile = typedValue;
+        timetableStep = 2;
+        userInput.type = "password";
+        appendMessage("bot", "Now enter your password to fetch your timetable:");
+        sendButton.disabled = false;
+        return;
+      } else if (timetableStep === 2) {
+        storedTimetablePassword = typedValue;
+        timetableStep = 0;
+        userInput.type = "text";
+        fetchTimetableData(storedTimetableMobile, storedTimetablePassword);
+        sendButton.disabled = false;
+        return;
+      }
+
+      const typingIndicator = showTypingIndicator();
+
+      try {
+        let endpoint;
+        switch(currentMode) {
+          case "code": endpoint = "/chat/code"; break;
+          case "subject": endpoint = "/chat/subject"; break;
+          case "kmit": endpoint = "/chat/kmit"; break;
+          default:
+            typingIndicator.remove();
+            appendMessage("bot", "Sorry, I didn't recognize that mode. Please try switching to a valid mode (Code, Subject, or KMIT).");
+            sendButton.disabled = false;
+            return;
+        }
+
+        const response = await fetch(ngrokurl + endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: typedValue })
+        });
+        const data = await response.json();
+        typingIndicator.remove();
+        const rawResponse = data.response ? data.response.trim() : "No response received.";
+        const formatted = formatResponse(rawResponse);
+        appendMessage("bot", formatted, true);
+      } catch (error) {
+        typingIndicator.remove();
+        console.error("Error during backend call:", error);
+        appendMessage("bot", "Sorry, there was an error processing your request.");
+      } finally {
+        sendButton.disabled = false;
+      }
+    }
+
+    sendButton.addEventListener("click", handleSend);
+    userInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSend(); });
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      htmlElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme === 'dark');
+      if (savedTheme === 'dark') {
+        sidebar.classList.add('blocked');
+      }
+    }
+
+    function toggleTheme() {
+      const currentTheme = htmlElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      htmlElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcon(newTheme === 'dark');
+
+      if (newTheme === 'dark') {
+        sidebar.classList.add('blocked');
+      } else {
+        sidebar.classList.remove('blocked');
+      }
+    }
+
+    function updateThemeIcon(isDark) {
+      themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+      const themeText = darkModeToggle.querySelector('.nav-text');
+      themeText.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
+
+    darkModeToggle.addEventListener('click', toggleTheme);
+
+    function setupVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        micButton.style.display = "none";
+        console.warn("Speech Recognition API not supported in this browser.");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      micButton.addEventListener("click", () => {
+        if (isRecording) {
+          recognition.stop();
+          return;
+        }
+        recognition.start();
+        isRecording = true;
+        micButton.classList.add("recording");
+        showToast("Listening...");
+      });
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim();
+        userInput.value = transcript;
+        handleSend();
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        micButton.classList.remove("recording");
+        showToast("Stopped listening.");
+      };
+
+      recognition.onerror = (event) => {
+        isRecording = false;
+        micButton.classList.remove("recording");
+        showToast("Error with voice recognition: " + event.error, true);
+        console.error("Speech recognition error:", event.error);
+      };
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      appendMessage("bot", "👋 Hello! I'm your Mithr assistant. I'm here to help you with attendance, results, and timetable information. How can I assist you today?");
+      setupVoiceRecognition();
+    });
+
+    function startAttendanceFlow() {
+      attendanceStep = 1;
+      userInput.type = "text";
+      appendMessage("bot", "Please enter your mobile number:");
+    }
+
+    function startResultsFlow() {
+      resultsStep = 1;
+      userInput.type = "text";
+      appendMessage("bot", "Please enter your mobile number to fetch your results:");
+    }
+
+    function startTimetableFlow() {
+      timetableStep = 1;
+      userInput.type = "text";
+      appendMessage("bot", "Please enter your mobile number to fetch your timetable:");
+    }
+
+    async function fetchAttendanceData(mobile, password) {
+      appendMessage("bot", "Fetching attendance data...");
+      try {
+        const response = await fetch(ngrokurl + "/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile_number: mobile, password: password }),
+        });
+        const data = await response.json();
+        appendMessage("bot", formatAttendance(data), true);
+      } catch (error) {
+        console.error("Error fetching attendance data:", error);
+        appendMessage("bot", "Failed to fetch attendance data.");
+      }
+    }
+
+    async function fetchResultsData(mobile, password) {
+  appendMessage("bot", "Fetching results data...");
+  try {
+    const response = await fetch(ngrokurl + "/results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mobile_number: mobile, password: password }),
+    });
+    const data = await response.json();
+    if (data.error) {
+      appendMessage("bot", data.error);
+    } else {
+      let resultsHTML = "";
+      data.forEach(period => {
+        // Check if the period has any subject with at least one non-"NA" value
+        const hasNonNA = period.Subjects.some(subject => 
+          Object.values(subject).some(value => value !== "NA")
+        );
+        if (hasNonNA) {
+          // Add introductory message only when we first find data
+          if (resultsHTML === "") {
+            resultsHTML = `<p>Here are your results:</p>`;
+          }
+          // Add period title
+          resultsHTML += `<h4>${period['Academic Period']}</h4>`;
+          // Start table
+          resultsHTML += `
+            <div class="table-responsive">
+              <table class="table table-bordered" style="margin-top: 10px;">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Type</th>
+                    <th>Assignment</th>
+                    <th>Subjective</th>
+                    <th>Quiz</th>
+                    <th>DTD</th>
+                    <th>Test</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          // Add rows for subjects with at least one non-"NA" value
+          period.Subjects.forEach(subject => {
+            if (Object.values(subject).some(value => value !== "NA")) {
+              resultsHTML += `
+                <tr>
+                  <td>${subject.Subject}</td>
+                  <td>${subject.Type}</td>
+                  <td>${subject.Assignment}</td>
+                  <td>${subject.Subjective}</td>
+                  <td>${subject.Quiz}</td>
+                  <td>${subject.DTD}</td>
+                  <td>${subject.Test}</td>
+                  <td>${subject.Total}</td>
+                </tr>
+              `;
+            }
+          });
+          // Close table
+          resultsHTML += `</tbody></table></div>`;
+        }
+      });
+      // If no periods had data, show a no-data message
+      if (resultsHTML === "") {
+        resultsHTML = `<p>No results data available.</p>`;
+      }
+      appendMessage("bot", resultsHTML, true);
+    }
+  } catch (error) {
+    console.error("Error fetching results data:", error);
+    appendMessage("bot", "Failed to fetch results data.");
+  }
+}
+
+    async function fetchTimetableData(mobile, password) {
+      appendMessage("bot", "Fetching timetable data...");
+      try {
+        const response = await fetch(ngrokurl + "/timetable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mobile_number: mobile, password: password }),
+        });
+        const data = await response.json();
+        if (data.error) {
+          appendMessage("bot", data.error);
+        } else {
+          let timetableHTML = `<p>Here is your timetable:</p>`;
+          data.forEach(day => {
+            timetableHTML += `<h4>${day.Day}</h4>`;
+            timetableHTML += `
+              <div class="table-responsive">
+                <table class="table table-bordered" style="margin-top: 10px;">
+                  <thead>
+                    <tr>
+                      <th>Period</th>
+                      <th>Subject</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+            `;
+            day.DayData.forEach(slot => {
+              timetableHTML += `
+                <tr>
+                  <td>${slot.Period}</td>
+                  <td>${slot.Subject}</td>
+                </tr>
+              `;
+            });
+            timetableHTML += `</tbody></table></div>`;
+          });
+          appendMessage("bot", timetableHTML, true);
+        }
+      } catch (error) {
+        console.error("Error fetching timetable data:", error);
+        appendMessage("bot", "Failed to fetch timetable data.");
+      }
+    }
+
+    function renderProgressBar(value) {
+      const percent = Math.round(value * 10) / 10 || 0;
+      const fillColor = percent >= 99.5 ? "green" : "#6200ee";
+      return `
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="position: relative; width: 80px; height: 6px; background-color: #e6e6e6; border-radius: 3px; overflow: hidden;">
+            <div style="height: 100%; width: ${percent}%; background-color: ${fillColor}; transition: width 0.3s;"></div>
+          </div>
+          <span style="font-size: 12px; color: #333; min-width: 30px;">${percent}%</span>
+        </div>
+      `;
+    }
+
+    function formatAttendance(data) {
+      if (data.error) {
+        return data.error;
+      }
+      let rows = "";
+      data.attendance_data.forEach(item => {
+        rows += `
+          <tr>
+            <td>${item.subject}</td>
+            <td>${renderProgressBar(item.theory)}</td>
+            <td>${renderProgressBar(item.practical)}</td>
+          </tr>
+        `;
+      });
+      return `
+        <div>
+          <p><strong>Student:</strong> ${data.student_name}</p>
+          <p><strong>Overall Attendance:</strong> ${data.overall_percent}%</p>
+          <div class="table-responsive" style="margin-top: 10px;">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Subject</th>
+                  <th>Theory (%)</th>
+                  <th>Practical (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateChatHistory(message) {
+      const historyDiv = document.createElement("div");
+      historyDiv.style.padding = "12px";
+      historyDiv.style.background = "var(--background-color)";
+      historyDiv.style.borderRadius = "8px";
+      historyDiv.style.cursor = "pointer";
+      historyDiv.innerHTML = `
+        <div style="font-weight: 500;">${message}</div>
+        <div style="font-size: 12px; color: var(--text-light);">Just now</div>
+      `;
+      secondarySidebarContent.prepend(historyDiv);
+    }
+
+    function linkify(text) {
+  const urlPattern = /(https?:\/\/[^"]+)/gi;
+  return text.replace(urlPattern, (match) => {
+    return `<a href="${match}" target="_blank" rel="noopener noreferrer">click here</a>`;
+  });
+}
+
+    function handleNavItemClick(item) {
+      navItems.forEach(navItem => navItem.classList.remove('active'));
+      item.classList.add('active');
+      sidebar.classList.add('collapsed');
+      const title = item.querySelector('.nav-text').textContent;
+      secondarySidebarTitle.textContent = title;
+
+      if (title === "Attendance") {
+        startAttendanceFlow();
+      } else if (title === "Results") {
+        startResultsFlow();
+      } else if (title === "Timetables") {
+        startTimetableFlow();
+      }
+
+      secondarySidebar.classList.add('active');
+      loadSecondarySidebarContent(title);
+    }
+
+    function loadSecondarySidebarContent(title) {
+      secondarySidebarContent.innerHTML = '';
+      secondarySidebarContent.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+          <div class="typing-indicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+      `;
+
+      setTimeout(() => {
+        let content = '';
+        switch(title) {
+          case 'Chat History':
+            content = `
+              <div style="padding: 16px;">
+                <h3 style="margin-bottom: 16px;">Recent Conversations</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <div style="padding: 12px; background: var(--background-color); border-radius: 8px; cursor: pointer;">
+                    <div style="font-weight: 500;">Attendance Query</div>
+                    <div style="font-size: 12px; color: var(--text-light);">2 minutes ago</div>
+                  </div>
+                  <div style="padding: 12px; background: var(--background-color); border-radius: 8px; cursor: pointer;">
+                    <div style="font-weight: 500;">Results Discussion</div>
+                    <div style="font-size: 12px; color: var(--text-light);">1 hour ago</div>
+                  </div>
+                </div>
+              </div>
+            `;
+            break;
+          case 'Bulletins':
+            fetch(ngrokurl + "/news_bulletins")
+              .then(response => response.json())
+              .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                  content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
+                } else {
+                  content = `<div style="padding: 16px;">No bulletins available.</div>`;
+                }
+                secondarySidebarContent.innerHTML = content;
+              })
+              .catch(error => {
+                console.error("Error fetching bulletins:", error);
+                secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading bulletins.</div>`;
+              });
+            return;
+          case 'Exam Notifications':
+            fetch(ngrokurl + "/exam_notifications")
+              .then(response => response.json())
+              .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                  content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
+                } else {
+                  content = `<div style="padding: 16px;">No notifications available.</div>`;
+                }
+                secondarySidebarContent.innerHTML = content;
+              })
+              .catch(error => {
+                console.error("Error fetching notifications:", error);
+                secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading notifications.</div>`;
+              });
+            return;
+          default:
+            content = `<div style="padding: 16px;">Content for ${title}</div>`;
+        }
+        secondarySidebarContent.innerHTML = content;
+      }, 500);
+    }
+
+    navItems.forEach(item => {
+      item.addEventListener('click', () => handleNavItemClick(item));
+    });
+
+    closeSecondarySidebarBtn.addEventListener('click', () => {
+      secondarySidebar.classList.remove('active');
+      sidebar.classList.remove('collapsed');
+      navItems.forEach(item => item.classList.remove('active'));
+    });
+
+    function handleSubjectDoubts() {
+  if (currentMode === "subject") {
+    currentMode = "kmit";
+    userInput.placeholder = "Type your message...";
+    event.currentTarget.classList.remove('active');
+  } else {
+    currentMode = "subject";
+    userInput.placeholder = "Ask your subject-related question...";
+    document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+  userInput.focus();
+}
+
+function handleCodeDoubts() {
+  if (currentMode === "code") {
+    currentMode = "kmit";
+    userInput.placeholder = "Type your message...";
+    event.currentTarget.classList.remove('active');
+  } else {
+    currentMode = "code";
+    userInput.placeholder = "Ask your coding-related question...";
+    document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+  userInput.focus();
+}
+  </script>
+</body>
+</html>

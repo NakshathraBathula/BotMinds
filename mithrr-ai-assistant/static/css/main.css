@@ -1,0 +1,47 @@
+
+:root 
+{
+        --background: #f8f9fa;
+        --foreground: #212529;
+        --primary: #6c5ce7;
+        --primary-light: #a29bfe;
+        --primary-dark: #5649c0;
+        --primary-foreground: #ffffff;
+        --secondary: #e9ecef;
+        --secondary-dark: #dee2e6;
+        --border: #ced4da;
+        --radius: 12px;
+        --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 15px rgba(0,0,0,0.1);
+        --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.dark {
+    --background: #121212;
+    --foreground: #e0e0e0;
+    --primary: #7c4dff;
+    --primary-light: #b388ff;
+    --primary-dark: #651fff;
+    --secondary: #1e1e1e;
+    --secondary-dark: #2d2d2d;
+    --border: #333;
+  }
+  * { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+  }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    transition: var(--transition);
+    padding-bottom: 80px;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  
+
+  
+  /* Theme toggles and generic components */

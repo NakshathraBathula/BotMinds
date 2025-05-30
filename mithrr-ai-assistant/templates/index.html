@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>College Assistant Chat</title>
+  <!-- Bootstrap CSS (optional for UI consistency) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- External Libraries for PDF and Markdown functionalities -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+  :root {
+    --background: #f8f9fa;
+    --foreground: #212529;
+    --primary: #6c5ce7;
+    --primary-light: #a29bfe;
+    --primary-dark: #5649c0;
+    --primary-foreground: #ffffff;
+    --secondary: #e9ecef;
+    --secondary-dark: #dee2e6;
+    --border: #ced4da;
+    --radius: 12px;
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-md: 0 8px 15px rgba(0,0,0,0.1);
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --font-size-base: 16px;
+  }
+  .dark {
+    --background: #121212;
+    --foreground: #e0e0e0;
+    --primary: #7c4dff;
+    --primary-light: #b388ff;
+    --primary-dark: #651fff;
+    --secondary: #1e1e1e;
+    --secondary-dark: #2d2d2d;
+    --border: #333;
+  }
+  * { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+  }
+  html {
+    font-size: var(--font-size-base);
+  }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    transition: var(--transition);
+    padding-bottom: 5rem; /* Reduced for mobile */
+    overflow-x: hidden;
+    line-height: 1.6;
+    font-size: 1rem;
+  }
+
+  /* App Bar (Top) */
+  .app-bar {
+    height: 3.5rem; /* Slightly smaller for mobile */
+    background-color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+  }
+  .app-bar .project-name {
+    font-size: 1rem; /* Smaller font for mobile */
+    font-weight: 600;
+    color: var(--primary-foreground);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .app-bar .logo {
+    width: 2rem;
+    height: 2rem;
+    background: var(--primary-foreground);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  .app-bar button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--primary-foreground);
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    touch-action: manipulation;
+  }
+  .app-bar button:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+
+  /* Dashboard (Sidebar) */
+  .dashboard {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80vw; /* Adjusted for mobile */
+    max-width: 320px; /* Maximum width for larger screens */
+    height: 100vh;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    transition: transform 0.3s ease-in-out;
+    z-index: 20;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+  }
+  .dark .dashboard {
+    background: rgba(30,30,30,0.95);
+  }
+  .dashboard.open {
+    transform: translateX(100%);
+  }
+  .dashboard-tabs {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    background: var(--secondary);
+    border-radius: var(--radius);
+    padding: 4px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 4px;
+  }
+  .dashboard-tab {
+    flex: 1;
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius) - 4px);
+    text-align: center;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    min-width: 80px; /* Ensure buttons don't get too small */
+  }
+  .dashboard-tab.active {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow);
+  }
+  .history-container,
+  .bulletins-container,
+  .notifications-container {
+    overflow-y: auto;
+    max-height: calc(100vh - 120px); /* Adjusted for smaller header */
+    padding-right: 4px;
+  }
+  .dashboard h2 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .dashboard-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: var(--secondary);
+    border: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--foreground);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    touch-action: manipulation;
+  }
+  .dashboard-close:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .history-item,
+  .bulletin-item,
+  .notification-item {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(108, 92, 231, 0.08);
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+  }
+  .history-item:hover,
+  .bulletin-item:hover,
+  .notification-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    background: rgba(108, 92, 231, 0.15);
+  }
+  .history-item svg,
+  .bulletin-item svg,
+  .notification-item svg {
+    color: var(--primary);
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 1rem;
+  }
+  .history-item span,
+  .bulletin-item span,
+  .notification-item span {
+    font-size: 0.75rem;
+    color: #666;
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* Chat Container */
+  .chat-container {
+    max-width: 90vw; /* Use viewport width */
+    width: 100%;
+    height: calc(100vh - 10rem); /* Dynamic height */
+    margin: 4rem 0.5rem 1rem 0.5rem;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
+    box-shadow: var(--shadow-md);
+  }
+  .chat-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--background);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chat-header h2 {
+    color: var(--primary);
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 600;
+  }
+  .chat-header .mode-indicator {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--background);
+  }
+  .chat-message {
+    max-width: 90%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    position: relative;
+    animation: slideIn 0.3s forwards;
+    word-break: break-word;
+    line-height: 1.5;
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
+  }
+  .bot-msg {
+    background: rgba(108, 92, 231, 0.1);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .user-msg {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .message-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: flex-end;
+  }
+  .action-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: inherit;
+    font-size: 0.9rem;
+    touch-action: manipulation;
+  }
+  .action-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.1);
+  }
+  .user-msg .action-btn {
+    background: rgba(0,0,0,0.1);
+  }
+  .user-msg .action-btn:hover {
+    background: rgba(0,0,0,0.2);
+  }
+
+  /* Search Bar */
+  .search-bar {
+    max-width: 90vw;
+    width: 100%;
+    margin: 1rem 0.5rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+  }
+  .search-bar:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.2);
+  }
+  .search-bar input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--secondary);
+    color: var(--foreground);
+    font-size: 0.9rem;
+    transition: var(--transition);
+  }
+  .search-bar input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.2);
+  }
+  .search-bar button {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    touch-action: manipulation;
+  }
+  .search-bar button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+  .search-bar button:active {
+    transform: translateY(0);
+  }
+  .voice-btn {
+    padding: 0.5rem;
+    background: var(--secondary);
+    color: var(--primary);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    width: 2.5rem;
+    height: 2.5rem;
+    touch-action: manipulation;
+  }
+  .voice-btn:hover {
+    background: var(--secondary-dark);
+  }
+  .voice-btn.listening {
+    animation: pulse 1.5s infinite;
+    background: #ff4757;
+    color: white;
+  }
+
+  /* Flash News Card */
+  .flash-news-card {
+    max-width: 90vw;
+    margin: 1rem 0.5rem;
+    padding: 1rem;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
+  }
+  .flash-news-card::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 10%);
+    background-size: 50px 50px;
+    animation: bubble 5s linear infinite;
+    opacity: 0.6;
+  }
+  .flash-news-card h3 {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+  }
+  .flash-news-card h3 i {
+    animation: flash 2s infinite;
+  }
+
+  /* Navigation / Action Buttons */
+  .action-buttons {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--background);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem;
+    z-index: 1000;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-wrap: nowrap; /* Prevent wrapping to maintain single row */
+  }
+  .action-buttons::-webkit-scrollbar {
+    display: none;
+  }
+  .action-btn-mode {
+    padding: 0.5rem 0.75rem;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 25px;
+    cursor: pointer;
+    color: var(--foreground);
+    transition: var(--transition);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    touch-action: manipulation;
+    min-width: 80px; /* Ensure buttons are touch-friendly */
+  }
+  .action-btn-mode.active,
+  .action-btn-mode:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+
+  /* Theme and Dashboard Toggles */
+  .theme-toggle,
+  .dashboard-toggle {
+    position: fixed;
+    top: 0.75rem;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    padding: 0.5rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--foreground);
+    z-index: 1100;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.2rem;
+    touch-action: manipulation;
+  }
+  .theme-toggle:hover,
+  .dashboard-toggle:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    transform: scale(1.05);
+  }
+  .theme-toggle { right: 0.75rem; }
+  .dashboard-toggle { left: 0.75rem; }
+
+  /* Typing Indicator */
+  .typing-indicator {
+    font-style: italic;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .typing-indicator .dot {
+    animation: blink 1s infinite;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Markdown styling */
+  .chat-message pre {
+    background: rgba(0,0,0,0.05);
+    padding: 0.75rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+  }
+  .dark .chat-message pre {
+    background: rgba(255,255,255,0.05);
+  }
+  .chat-message code {
+    font-family: 'Courier New', monospace;
+    background: rgba(0,0,0,0.05);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.8em;
+  }
+  .dark .chat-message code {
+    background: rgba(255,255,255,0.1);
+  }
+  .chat-message p {
+    margin-bottom: 0.5rem;
+  }
+  .chat-message p:last-child {
+    margin-bottom: 0;
+  }
+  .chat-message ul,
+  .chat-message ol {
+    padding-left: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+  .chat-message li {
+    margin-bottom: 0.25rem;
+  }
+  .chat-message a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .chat-message a:hover {
+    text-decoration: underline;
+  }
+
+  /* Toast Notification */
+  .toast-notification {
+    position: fixed;
+    bottom: 5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    opacity: 0;
+    transition: all 0.3s ease-in-out;
+    z-index: 1200;
+    font-size: 0.9rem;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast-notification.error {
+    background: #dc3545;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    html {
+      font-size: 14px; /* Smaller base font size for mobile */
+    }
+    .app-bar {
+      height: 3rem;
+    }
+    .app-bar .project-name {
+      font-size: 0.9rem;
+    }
+    .app-bar .logo {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 0.8rem;
+    }
+    .app-bar button {
+      font-size: 1rem;
+    }
+    .dashboard {
+      width: 100vw; /* Full width on mobile */
+      max-width: none;
+      padding: 0.75rem;
+    }
+    .dashboard.open {
+      transform: translateX(100%);
+    }
+    .dashboard-tabs {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: 0.25rem;
+    }
+    .dashboard-tab {
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      min-width: 0;
+      flex: 1;
+    }
+    .dashboard-close {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 0.9rem;
+    }
+    .history-item,
+    .bulletin-item,
+    .notification-item {
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      gap: 0.5rem;
+    }
+    .history-item svg,
+    .bulletin-item svg,
+    .notification-item svg {
+      font-size: 0.9rem;
+    }
+    .history-item span,
+    .bulletin-item span,
+    .notification-item span {
+      font-size: 0.7rem;
+    }
+    .chat-container {
+      margin: 3.5rem 0.5rem 5rem 0.5rem;
+      height: calc(100vh - 9rem);
+    }
+    .chat-header {
+      padding: 0.5rem;
+    }
+    .chat-header h2 {
+      font-size: 1rem;
+    }
+    .chat-header .mode-indicator {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.7rem;
+    }
+    .messages {
+      padding: 0.75rem;
+      gap: 0.5rem;
+    }
+    .chat-message {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      max-width: 95%;
+    }
+    .message-actions {
+      gap: 0.25rem;
+    }
+    .action-btn {
+      width: 1.5rem;
+      height: 1.5rem;
+      font-size: 0.8rem;
+    }
+    .search-bar {
+      margin: 0.5rem;
+      padding: 0.25rem;
+      gap: 0.25rem;
+    }
+    .search-bar input {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .search-bar button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+    }
+    .send-text {
+      display: none; /* Hide send text on mobile */
+    }
+    .voice-btn {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1rem;
+    }
+    .action-buttons {
+      padding: 0.5rem;
+      gap: 0.25rem;
+      justify-content: flex-start; /* Align left to handle overflow */
+    }
+    .action-btn-mode {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      min-width: 70px;
+    }
+    .theme-toggle,
+    .dashboard-toggle {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1rem;
+      top: 0.5rem;
+    }
+    .theme-toggle { right: 0.5rem; }
+    .dashboard-toggle { left: 0.5rem; }
+    .flash-news-card {
+      margin: 0.5rem;
+      padding: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .flash-news-card h3 {
+      font-size: 0.9rem;
+    }
+    .toast-notification {
+      bottom: 4rem;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    html {
+      font-size: 12px; /* Further reduce font size for very small screens */
+    }
+    .chat-container {
+      margin: 3rem 0.25rem 4rem 0.25rem;
+      height: calc(100vh - 8rem);
+    }
+    .search-bar input {
+      font-size: 0.8rem;
+    }
+    .action-btn-mode {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.7rem;
+      min-width: 60px;
+    }
+  }
+
+  /* Animations */
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+  }
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  @keyframes bubble {
+    from { transform: translate(0, 0); }
+    to { transform: translate(50px, 50px); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0% { opacity: 0.2; }
+    20% { opacity: 1; }
+    100% { opacity: 0.2; }
+  }
+</style>
+</head>
+<body class="light">
+  <!-- Theme and Dashboard Toggle Buttons -->
+  <button id="themeToggle" class="theme-toggle" title="Toggle dark mode">
+    <i class="fas fa-moon"></i>
+  </button>
+  <button id="dashboardToggle" class="dashboard-toggle" title="Open dashboard">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <!-- Dashboard Sidebar -->
+  <div id="dashboard" class="dashboard">
+    <button class="dashboard-close" id="dashboardClose" title="Close dashboard">
+      <i class="fas fa-times"></i>
+    </button>
+    <!-- Dashboard Tabs -->
+    <div class="dashboard-tabs">
+      <button id="historyTab" class="dashboard-tab active">
+        <i class="fas fa-history"></i> History
+      </button>
+      <button id="bulletinsTab" class="dashboard-tab">
+        <i class="fas fa-bullhorn"></i> Bulletins
+      </button>
+      <button id="notificationsTab" class="dashboard-tab">
+        <i class="fas fa-bell"></i> Exams
+      </button>
+    </div>
+    <!-- Chat History Container -->
+    <div class="history-container" id="historyContainer">
+      <div class="history-item">
+        <i class="fas fa-comment"></i>
+        <div class="content">
+          <p>Asked about attendance policy</p>
+          <span>2 hours ago</span>
+        </div>
+      </div>
+      <div class="history-item">
+        <i class="fas fa-comment"></i>
+        <div class="content">
+          <p>Requested exam timetable</p>
+          <span>Yesterday</span>
+        </div>
+      </div>
+      <div class="history-item">
+        <i class="fas fa-comment"></i>
+        <div class="content">
+          <p>Code doubt about Python loops</p>
+          <span>3 days ago</span>
+        </div>
+      </div>
+    </div>
+    <!-- Bulletins Container (hidden by default) -->
+    <div class="bulletins-container" id="bulletinsContainer" style="display: none;">
+      <p>Loading college bulletins...</p>
+    </div>
+    <!-- Exam Notifications Container (hidden by default) -->
+    <div class="notifications-container" id="notificationsContainer" style="display: none;">
+      <p>Loading exam notifications...</p>
+    </div>
+  </div>
+
+  <!-- Chat Container -->
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2><i class="fas fa-robot"></i> Mithrr</h2>
+      <div class="mode-indicator" id="modeIndicator">General</div>
+    </div>
+    <div class="messages" id="chatMessages">
+      <div class="chat-message bot-msg">
+        <p>Welcome to the Mithrr! I can help you with:</p>
+        <ul>
+          <li>Attendance queries</li>
+          <li>Coding doubts</li>
+          <li>Subject explanations</li>
+        </ul>
+        <p>How can I assist you today?</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <button id="voiceBtn" class="voice-btn" title="Voice Input" aria-label="Start Voice Input">
+      <i class="fas fa-microphone"></i>
+    </button>
+    <input type="text" id="userInput" placeholder="Ask about attendance, results, timetable, or subject doubts..." autocomplete="off" />
+    <button id="sendButton">
+      <i class="fas fa-paper-plane"></i>
+      <span class="send-text">Send</span>
+    </button>
+  </div>
+
+  <!-- Action Buttons for Mode Switching -->
+  <div class="action-buttons">
+    <button id="attendanceBtn" class="action-btn-mode">
+      <i class="fas fa-calendar-check"></i> Attendance
+    </button>
+    <button id="codeBtn" class="action-btn-mode">
+      <i class="fas fa-code"></i> Code Help
+    </button>
+    <button id="subjectBtn" class="action-btn-mode">
+      <i class="fas fa-book"></i> Subject Help
+    </button>
+  </div>
+
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    /* ------------------------
+       Global State & Variables
+    ------------------------ */
+    let currentMode = "kmit";
+    let ngrokurl = "";
+    let rawInput = "";
+    let isDeleting = false;
+    let isListening = false;
+    
+    /* ------------------------
+       Element References
+    ------------------------ */
+    const body = document.body;
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const dashboard = document.getElementById('dashboard');
+    const dashboardToggle = document.getElementById('dashboardToggle');
+    const dashboardClose = document.getElementById('dashboardClose');
+    const historyTab = document.getElementById('historyTab');
+    const bulletinsTab = document.getElementById('bulletinsTab');
+    const notificationsTab = document.getElementById('notificationsTab');
+    const historyContainer = document.getElementById('historyContainer');
+    const bulletinsContainer = document.getElementById('bulletinsContainer');
+    const notificationsContainer = document.getElementById('notificationsContainer');
+    const flashNewsCard = document.getElementById('flashNewsCard');
+    const chatMessages = document.getElementById("chatMessages");
+    const userInput = document.getElementById("userInput");
+    const sendButton = document.getElementById("sendButton");
+    const voiceBtn = document.getElementById("voiceBtn");
+    const modeIndicator = document.getElementById("modeIndicator");
+    const attendanceBtn = document.getElementById("attendanceBtn");
+    const codeBtn = document.getElementById("codeBtn");
+    const subjectBtn = document.getElementById("subjectBtn");
+
+    let attendanceStep = 0;  // 0 = not in attendance flow, 1 = ask mobile, 2 = ask password
+    let storedMobile = "";
+    let storedPassword = "";
+
+    /* ------------------------
+       Initialization
+    ------------------------ */
+    window.addEventListener("DOMContentLoaded", () => {
+      // Initialize event listeners
+      setupEventListeners();
+      
+      // Add some sample history items
+      const sampleHistory = [
+        { text: "What's the minimum attendance requirement?", time: "2 hours ago" },
+        { text: "When are the semester exams?", time: "Yesterday" },
+        { text: "Explain linked lists in C", time: "3 days ago" }
+      ];
+      
+      sampleHistory.forEach(item => {
+        const historyItem = document.createElement("div");
+        historyItem.className = "history-item";
+        historyItem.innerHTML = `
+          <i class="fas fa-comment"></i>
+          <div class="content">
+            <p>${item.text}</p>
+            <span>${item.time}</span>
+          </div>
+        `;
+        historyContainer.appendChild(historyItem);
+      });
+      
+      // Focus input field
+      userInput.focus();
+      
+      // Set backend URL
+      setBackendUrl();
+    });
+
+    function setupEventListeners() {
+      // Mode switching buttons
+      attendanceBtn.addEventListener('click', () => setMode('attendance'));
+      codeBtn.addEventListener('click', () => setMode('code'));
+      subjectBtn.addEventListener('click', () => setMode('subject'));
+      
+      // Dashboard tabs
+      historyTab.addEventListener('click', showHistoryTab);
+      bulletinsTab.addEventListener('click', showBulletinsTab);
+      notificationsTab.addEventListener('click', showNotificationsTab);
+      
+      // Theme toggle
+      themeToggle.addEventListener('click', toggleTheme);
+      
+      // Dashboard toggle
+      dashboardToggle.addEventListener('click', toggleDashboard);
+      dashboardClose.addEventListener('click', closeDashboard);
+      
+      // Chat functionality
+      sendButton.addEventListener("click", handleSend);
+      userInput.addEventListener("keydown", (e) => { 
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      });
+      
+      // Voice recognition
+      setupVoiceRecognition();
+      document.addEventListener('click', (e) => {
+    if (isToggling) return;
+    if (dashboard.classList.contains('open') && 
+        !dashboard.contains(e.target) && 
+        !dashboardToggle.contains(e.target)) {
+      console.log('Closing dashboard due to outside click');
+      closeDashboard();
+    }
+  });
+  }
+
+    /* ------------------------
+       Mode Switching
+    ------------------------ */
+    function setMode(mode) {
+      if (currentMode === mode) {
+        // If already in this mode, revert to general mode
+        currentMode = "kmit";
+        document.querySelectorAll('.action-btn-mode').forEach(btn => btn.classList.remove('active'));
+        modeIndicator.textContent = "General";
+        
+        // If in attendance flow, reset it
+        if (attendanceStep > 0) {
+          attendanceStep = 0;
+          userInput.type = "text";
+        }
+      } else {
+        currentMode = mode;
+        document.querySelectorAll('.action-btn-mode').forEach(btn => btn.classList.remove('active'));
+        
+        let modeText = "General";
+        if (mode === "attendance") {
+          attendanceBtn.classList.add('active');
+          modeText = "Attendance";
+          startAttendanceFlow();
+          return; // Don't show confirmation message yet
+        } else if (mode === "code") {
+          codeBtn.classList.add('active');
+          modeText = "Code Help";
+        } else if (mode === "subject") {
+          subjectBtn.classList.add('active');
+          modeText = "Subject Help";
+        }
+        
+        modeIndicator.textContent = modeText;
+        
+        // Show mode confirmation message
+        const confirmation = document.createElement("div");
+        confirmation.className = "chat-message bot-msg";
+        confirmation.innerHTML = `<p>Mode set to <strong>${modeText}</strong>. Ask me anything about this topic!</p>`;
+        chatMessages.appendChild(confirmation);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+
+    function startAttendanceFlow() {
+      attendanceStep = 1;
+      userInput.type = "text";
+      appendMessage("bot", "Please enter your mobile number registered with the college:");
+    }
+
+    /* ------------------------
+       Dashboard Functions
+    ------------------------ */
+    function showHistoryTab() {
+      historyTab.classList.add('active');
+      bulletinsTab.classList.remove('active');
+      notificationsTab.classList.remove('active');
+      historyContainer.style.display = "block";
+      bulletinsContainer.style.display = "none";
+      notificationsContainer.style.display = "none";
+    }
+
+    async function showBulletinsTab() {
+      bulletinsTab.classList.add('active');
+      historyTab.classList.remove('active');
+      notificationsTab.classList.remove('active');
+      historyContainer.style.display = "none";
+      bulletinsContainer.style.display = "block";
+      notificationsContainer.style.display = "none";
+      bulletinsContainer.innerHTML = "<p>Loading bulletins...</p>";
+      
+      try {
+        const response = await fetch(ngrokurl + "/news_bulletins");
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          bulletinsContainer.innerHTML = "";
+          data.forEach(item => {
+            const bulletinDiv = document.createElement("div");
+            bulletinDiv.className = "bulletin-item";
+            bulletinDiv.innerHTML = `
+              <i class="fas fa-newspaper"></i>
+              <div class="content">
+                <p>${linkify(item)}</p>
+                <span>Just now</span>
+              </div>
+            `;
+            bulletinsContainer.appendChild(bulletinDiv);
+          });
+        } else {
+          bulletinsContainer.innerHTML = "<p>No bulletins available at the moment.</p>";
+        }
+      } catch (error) {
+        bulletinsContainer.innerHTML = "<p>Error loading bulletins. Please try again later.</p>";
+        console.error("Error fetching bulletins:", error);
+      }
+    }
+
+    async function showNotificationsTab() {
+  notificationsTab.classList.add('active');
+  historyTab.classList.remove('active');
+  bulletinsTab.classList.remove('active');
+  historyContainer.style.display = "none";
+  bulletinsContainer.style.display = "none";
+  notificationsContainer.style.display = "block";
+  notificationsContainer.innerHTML = "<p>Loading exam notifications...</p>";
+
+  try {
+    const response = await fetch(ngrokurl + "/exam_notifications");
+    const data = await response.json();
+
+    if (Array.isArray(data) && data.length > 0) {
+      notificationsContainer.innerHTML = "";
+
+      data.forEach(item => {
+        // item format: "Title (Posted on DATE) - https://.../file.pdf"
+        const [beforeDash, url] = item.split(" - ");
+        const dateMatch = beforeDash.match(/\(Posted on [^)]+\)/);
+        const titlePart = dateMatch ? beforeDash.replace(dateMatch[0], '').trim() : beforeDash.trim();
+        const postedDate = dateMatch ? dateMatch[0] : '';
+
+        // Extract filename from URL
+        const filename = url.split('/').pop();
+
+        // Construct display: keep whitespaces exactly
+        const displayText = `${titlePart} ${postedDate} - ` +
+                            `<a href="${url}" target="_blank" rel="noopener noreferrer">Click here</a> ${filename}`;
+
+        const notifDiv = document.createElement("div");
+        notifDiv.className = "notification-item";
+        notifDiv.innerHTML = `
+          <i class="fas fa-exclamation-circle"></i>
+          <div class="content">
+            <p>${displayText}</p>
+          </div>
+        `;
+        notificationsContainer.appendChild(notifDiv);
+      });
+
+    } else {
+      notificationsContainer.innerHTML = "<p>No exam notifications available at the moment.</p>";
+    }
+
+  } catch (error) {
+    notificationsContainer.innerHTML = "<p>Error loading exam notifications. Please try again later.</p>";
+    console.error("Error fetching exam notifications:", error);
+  }
+}
+
+  function linkify(text) {
+  const urlPattern = /(https?:\/\/[^"]+)/gi;
+  return text.replace(urlPattern, (match) => {
+    return `<a href="${match}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+  });
+}
+  /*
+    function linkify(text) {
+      const urlPattern = /(\b(https?:\/\/|www\.)[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+      return text.replace(urlPattern, function(match) {
+        const url = match.startsWith("http") ? match : "http://" + match;
+        return `<a href="${url}" target="_blank">${match}</a>`;
+      });
+    }
+*/
+    /* ------------------------
+       UI Toggles
+    ------------------------ */
+
+    // Add to setupEventListeners()
+
+
+    function toggleTheme() { 
+      body.classList.toggle('dark');
+      if (body.classList.contains('dark')) {
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      } else {
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+      }
+    }
+    let isToggling = false;
+
+
+    function toggleDashboard() { 
+      isToggling = true;
+      dashboard.classList.toggle('open');
+      const icon = dashboardToggle.querySelector('i');
+      if (dashboard.classList.contains('open')) {
+        icon.classList.remove('fa-bars');
+        icon.classList.add('fa-times');
+      } else {
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+      }
+    }
+
+    function closeDashboard() { 
+      dashboard.classList.remove('open');
+      dashboardToggle.querySelector('i').classList.remove('fa-times');
+      dashboardToggle.querySelector('i').classList.add('fa-bars');
+    }
+
+    /* ------------------------
+       Backend Connection
+    ------------------------ */
+    async function setBackendUrl() {
+      try {
+        const response = await fetch("https://mithr-2b2e3-default-rtdb.firebaseio.com/ngrok_url.json");
+        const data = await response.json();
+        if (data && data.url) {
+          ngrokurl = data.url;
+          console.log("Dynamic backend URL:", ngrokurl);
+        } else {
+          throw new Error("Backend URL not found in Firebase.");
+        }
+      } catch (error) {
+        console.error("Error fetching backend URL:", error);
+        appendMessage("bot", "Warning: Backend service is currently unavailable. Some features may not work.");
+      }
+    }
+
+    /* ------------------------
+       Chat Functionality
+    ------------------------ */
+    async function handleSend() {
+      const typedValue = userInput.value.trim();
+      if (!typedValue) return;
+      
+      if (!ngrokurl) {
+        appendMessage("bot", "Backend service is still connecting. Please try again in a moment.");
+        return;
+      }
+      
+      let userMessageText = typedValue;
+
+      // Handle password masking in attendance flow
+      if (attendanceStep === 2) {
+        userMessageText = "*".repeat(typedValue.length);
+      }
+
+      // Add user message to chat
+      appendMessage("user", userMessageText);
+      userInput.value = "";
+      rawInput = "";
+
+      // Handle attendance flow steps
+      if (attendanceStep === 1) {
+        storedMobile = typedValue;
+        attendanceStep = 2;
+        userInput.type = "password";
+        appendMessage("bot", "Now enter your password:");
+        return;
+      } else if (attendanceStep === 2) {
+        storedPassword = typedValue;
+        attendanceStep = 0;
+        userInput.type = "text";
+        fetchAttendanceData(storedMobile, storedPassword);
+        return;
+      }
+
+      // Add to chat history
+      addToHistory(typedValue);
+      
+      // Show typing indicator
+      const typingIndicator = showTypingIndicator();
+      
+      try {
+        let endpoint;
+        switch(currentMode) {
+          case "code": endpoint = "/chat/code"; break;
+          case "subject": endpoint = "/chat/subject"; break;
+          case "kmit":
+          default: endpoint = "/chat/kmit"; break;
+        }
+        
+        const response = await fetch(ngrokurl + endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: typedValue })
+        });
+        
+        const data = await response.json();
+        typingIndicator.remove();
+        
+        if (response.ok) {
+          const rawResponse = data.response ? data.response.trim() : "I didn't get a response. Please try again.";
+          const formatted = formatResponse(rawResponse);
+          appendMessage("bot", formatted, true);
+        } else {
+          throw new Error(data.error || "Unknown error occurred");
+        }
+      } catch (error) {
+        typingIndicator.remove();
+        console.error("Error during backend call:", error);
+        appendMessage("bot", "Sorry, there was an error processing your request. Please try again later.");
+      }
+    }
+
+    function addToHistory(message) {
+      const historyItem = document.createElement("div");
+      historyItem.className = "history-item";
+      historyItem.innerHTML = `
+        <i class="fas fa-comment"></i>
+        <div class="content">
+          <p>${message.substring(0, 50)}${message.length > 50 ? '...' : ''}</p>
+          <span>Just now</span>
+        </div>
+      `;
+      historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+    }
+
+    function formatResponse(rawResponse) {
+      // Check for code blocks
+      if (rawResponse.includes("```")) {
+        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+        rawResponse = rawResponse.replace(codeBlockRegex, (match, language, code) => {
+          const langClass = language ? `language-${language}` : '';
+          return `<pre><code class="${langClass}">${code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`;
+        });
+      }
+      
+      // Process markdown
+      let formatted = marked.parse(rawResponse);
+      
+      // Make URLs clickable
+      formatted = formatted.replace(
+        /(\b(https?:\/\/|www\.)[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig,
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+      );
+      
+      return formatted;
+    }
+
+    function appendMessage(sender, message, isHTML = false) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `chat-message ${sender === "user" ? "user-msg" : "bot-msg"}`;
+      
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      if (isHTML) {
+        bubble.innerHTML = message;
+      } else {
+        bubble.textContent = message;
+      }
+      msgDiv.appendChild(bubble);
+      
+      // Add action buttons for bot messages
+      if (sender === "bot") {
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "message-actions";
+        
+        // Copy button
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "action-btn copy-btn";
+        copyBtn.title = "Copy to clipboard";
+        copyBtn.innerHTML = `<i class="fas fa-copy"></i>`;
+        copyBtn.addEventListener("click", () => copyToClipboard(message, isHTML));
+        
+        // Download as TXT button
+        const downloadBtn = document.createElement("button");
+        downloadBtn.className = "action-btn download-btn";
+        downloadBtn.title = "Download as text file";
+        downloadBtn.innerHTML = `<i class="fas fa-file-alt"></i>`;
+        downloadBtn.addEventListener("click", () => downloadResponse(message));
+        
+        // Download as PDF button
+        const pdfBtn = document.createElement("button");
+        pdfBtn.className = "action-btn pdf-btn";
+        pdfBtn.title = "Download as PDF";
+        pdfBtn.innerHTML = `<i class="fas fa-file-pdf"></i>`;
+        pdfBtn.addEventListener("click", () => downloadResponseAsPDF(message, isHTML));
+        
+        actionsDiv.appendChild(copyBtn);
+        actionsDiv.appendChild(downloadBtn);
+        actionsDiv.appendChild(pdfBtn);
+        msgDiv.appendChild(actionsDiv);
+      }
+      
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      const typingMessage = document.createElement("div");
+      typingMessage.className = "chat-message bot-msg typing-indicator";
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      bubble.innerHTML = 'thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>';
+      typingMessage.appendChild(bubble);
+      chatMessages.appendChild(typingMessage);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return typingMessage;
+    }
+
+    /* ------------------------
+       Attendance Functions
+    ------------------------ */
+    function renderProgressBar(value) {
+      if (value == null) value = 0;
+      const percent = Math.round(value * 10) / 10;
+      const isFull = percent >= 99.5;
+      const fillColor = isFull ? "green" : "#4e73df";
+      return `
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div style="position: relative; width: 100px; height: 10px; background-color: #e6e6e6; border-radius: 5px; overflow: hidden;">
+            <div style="height: 100%; width: ${percent}%; background-color: ${fillColor}; transition: width 0.3s;"></div>
+          </div>
+          <span style="font-size: 12px; color: #333; min-width: 30px;">${percent}%</span>
+        </div>
+      `;
+    }
+
+    function formatAttendance(data) {
+      if (data.error) {
+        return data.error;
+      }
+      
+      let tableHTML = `
+        <div class="table-responsive">
+          <table class="table table-bordered" style="margin-top: 10px;">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Theory (%)</th>
+                <th>Practical (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      data.attendance_data.forEach((item) => {
+        tableHTML += `
+              <tr>
+                <td>${item.subject}</td>
+                <td>${renderProgressBar(item.theory)}</td>
+                <td>${renderProgressBar(item.practical)}</td>
+              </tr>
+        `;
+      });
+      
+      tableHTML += `
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      return `
+        <div>
+          <p><strong>Student:</strong> ${data.student_name}</p>
+          <p><strong>Overall Attendance:</strong> ${data.overall_percent}%</p>
+          ${tableHTML}
+        </div>
+      `;
+    }
+
+    async function fetchAttendanceData(mobile, password) {
+      appendMessage("bot", "Fetching attendance data...");
+      
+      try {
+    const response = await fetch(ngrokurl + "/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        mobile_number: mobile, 
+        password: password 
+      }),
+    });
+        
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server responded with status ${response.status}: ${errorText}`);
+    }
+        const data = await response.json();
+        
+        if (response.ok) {
+          appendMessage("bot", formatAttendance(data), true);
+        } else {
+          throw new Error(data.error || "Failed to fetch attendance data");
+        }
+      } catch (error) {
+        console.error("Error fetching attendance data:", error);
+        appendMessage("bot", "Failed to fetch attendance data. Please check your credentials and try again.");
+      }
+    }
+
+    /* ------------------------
+       Utility Functions
+    ------------------------ */
+    function showToast(message, isError = false) {
+      const toast = document.createElement("div");
+      toast.className = `toast-notification ${isError ? 'error' : 'success'}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 10);
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
+
+    function stripHtmlTags(html) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = html;
+      return tempDiv.textContent || tempDiv.innerText || "";
+    }
+
+    async function copyToClipboard(message, isHTML) {
+      if (isHTML && navigator.clipboard && window.ClipboardItem) {
+        try {
+          const blobInput = new Blob([message], { type: 'text/html' });
+          const clipboardItem = new ClipboardItem({ 'text/html': blobInput });
+          await navigator.clipboard.write([clipboardItem]);
+          showToast("Copied formatted content to clipboard!");
+          return;
+        } catch (err) {
+          console.warn("Could not copy HTML. Falling back to plain text...", err);
+        }
+      }
+      
+      const plainText = isHTML ? stripHtmlTags(message) : message;
+      navigator.clipboard.writeText(plainText)
+        .then(() => showToast("Copied to clipboard!"))
+        .catch(err => {
+          console.error("Failed to copy!", err);
+          showToast("Failed to copy to clipboard", true);
+        });
+    }
+
+    function downloadResponse(text) {
+      const content = stripHtmlTags(text);
+      const fileName = getResponseFileName("txt");
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Downloaded as text file!");
+    }
+
+    function downloadResponseAsPDF(text, isHTML) {
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      container.style.padding = '20px';
+      container.style.backgroundColor = body.classList.contains('dark') ? "#121212" : "#fff";
+      container.style.color = body.classList.contains('dark') ? "#e0e0e0" : "#212529";
+      container.innerHTML = isHTML ? text : `<p>${text}</p>`;
+      document.body.appendChild(container);
+      
+      html2canvas(container, { 
+        scale: 2,
+        backgroundColor: body.classList.contains('dark') ? "#121212" : "#fff"
+      }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(getResponseFileName("pdf"));
+        document.body.removeChild(container);
+        showToast("Downloaded as PDF!");
+      }).catch(err => {
+        console.error("Error generating PDF", err);
+        document.body.removeChild(container);
+        showToast("Failed to generate PDF", true);
+      });
+    }
+
+    function getResponseFileName(extension) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      return `college-assistant-${year}${month}${day}-${hours}${minutes}${seconds}.${extension}`;
+    }
+
+    /* ------------------------
+       Voice Recognition
+    ------------------------ */
+    function setupVoiceRecognition() {
+      if ("webkitSpeechRecognition" in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+        
+        recognition.onstart = function() {
+          isListening = true;
+          voiceBtn.classList.add("listening");
+          userInput.placeholder = "Listening...";
+        };
+        
+        recognition.onresult = function(event) {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          userInput.value = transcript;
+          rawInput = transcript;
+        };
+        
+        recognition.onerror = function(event) {
+          console.error("Speech recognition error", event.error);
+          isListening = false;
+          voiceBtn.classList.remove("listening");
+          userInput.placeholder = "Ask about attendance, results, timetable, or subject doubts...";
+          showToast("Voice input error: " + event.error, true);
+        };
+        
+        recognition.onend = function() {
+          isListening = false;
+          voiceBtn.classList.remove("listening");
+          userInput.placeholder = "Ask about attendance, results, timetable, or subject doubts...";
+        };
+        
+        voiceBtn.addEventListener('click', () => {
+          if (!("webkitSpeechRecognition" in window)) {
+            showToast("Voice input is not supported in this browser.", true);
+            return;
+          }
+          if (isListening) {
+            recognition.stop();
+          } else {
+            recognition.start();
+          }
+        });
+      } else {
+        console.warn("Speech Recognition API not supported in this browser.");
+        voiceBtn.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
