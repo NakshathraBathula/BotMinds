@@ -158,124 +158,51 @@ async def fetch_attendance(mobile_number, password):
             "overall_percent": overall_percent
         }
 
-async def fetch_timetable_data(mobile_number: str, password: str):
+async def fetch_timetable(page):
+    """Extract timetable data from the page"""
+    await page.wait_for_selector('.ant-table-row')
+    html_content = await page.content()
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    timetable = []
+    rows = soup.select('.ant-table-row')
+    for row in rows:
+        cells = row.select('.ant-table-cell')
+        if len(cells) >= 3:
+            timetable.append({
+                "Day": cells[0].get_text(strip=True),
+                "Period": cells[1].get_text(strip=True),
+                "Subject": cells[2].get_text(strip=True)
+            })
+    return timetable
+
+async def fetch_timetable_data(mobile_number, password):
     async with async_playwright() as p:
-        # Launch Chromium in headless mode
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
-
-        # === 1. Login ===
-        await page.goto(LOGIN_URL, timeout=60000)
-        await page.wait_for_timeout(2000)  # Wait for JS to initialize
-
-        try:
-            await page.fill(".ant-input", mobile_number)
-            await page.fill(".ant-input-password input", password)
-            await page.click(".ant-btn-primary")
-        except Exception:
-            # Fallback selectors in case the primary ones fail
-            await page.fill('input[type="text"]', mobile_number)
-            await page.fill('input[type="password"]', password)
-            await page.click('button:has-text("Login")')
-
+        page = await browser.new_page()
+        await page.goto(LOGIN_URL)
+        await page.fill(".ant-input", mobile_number)
+        await page.fill(".ant-input-password input", password)
+        await page.click(".ant-btn-primary")
         await page.wait_for_load_state("networkidle")
-        await page.wait_for_timeout(3000)
-
-        # === 2. Navigate to Timetable Page ===
-        await page.goto(TIME_TABLE_URL, timeout=60000)
-        await page.wait_for_timeout(3000)
-
-        # === 3. Wait for Collapse Items ===
-        try:
-            await page.wait_for_selector(".ant-collapse-item", timeout=15000)
-        except Exception:
-            # Save debug info if collapse items aren't found
-            full_html = await page.content()
-            with open("debug_no_collapse_page.html", "w", encoding="utf-8") as f:
-                f.write(full_html)
-            await page.screenshot(path="debug_no_collapse_page.png", full_page=True)
-            raise Exception("Timed out waiting for '.ant-collapse-item'. Saved debug files.")
-
-        # === 4. Locate All Collapse Items ===
-        collapse_items = page.locator(".ant-collapse-item")
-        item_count = await collapse_items.count()
-        if item_count == 0:
-            raise Exception("Found zero '.ant-collapse-item' elements; aborting.")
-
-        flat_entries = []  # Store timetable entries
-
-        # === 5. Process Each Collapse Item ===
-        for idx in range(item_count):
-            this_item = collapse_items.nth(idx)
-            header = this_item.locator(".ant-collapse-header")
-
-            # Expand the collapse item
-            await header.scroll_into_view_if_needed()
-            await header.click()
-
-            # Wait for table rows to load using JavaScript
-            try:
-                await page.wait_for_function(
-                    f"document.querySelectorAll('.ant-collapse-item:nth-child({idx + 1}) .ant-table-tbody tr').length > 0",
-                    timeout=15000  # Wait up to 15 seconds
-                )
-            except Exception:
-                # Save debug info if rows aren't found
-                single_html = await this_item.inner_html()
-                fname_html = f"debug_item_{idx}.html"
-                with open(fname_html, "w", encoding="utf-8") as f:
-                    f.write(single_html)
-                screenshot_name = f"debug_item_{idx}.png"
-                await page.screenshot(path=screenshot_name, full_page=True)
-                print(f"⚠  No table rows found under collapse-item index {idx}. Saved {fname_html} and {screenshot_name}.")
-                continue
-
-            # Parse the HTML once rows are confirmed to be present
-            item_html = await this_item.inner_html()
-            soup = BeautifulSoup(item_html, "html.parser")
-
-            # Extract Day Name
-            day_heading_tag = soup.select_one(".ant-collapse-header-text h4")
-            day_name = day_heading_tag.get_text(strip=True) if day_heading_tag else f"Day_{idx}"
-
-            # Find Table Body and Rows
-            table_body = soup.select_one(".ant-table-tbody")
-            if not table_body:
-                print(f"⚠  No <tbody> found for '{day_name}'.")
-                continue
-
-            rows = table_body.select("tr")
-            if not rows:
-                print(f"⚠  No <tr> elements found under <tbody> for '{day_name}'.")
-                continue
-
-            # Parse Rows
-            for row in rows:
-                td_tags = row.select("td")
-                if len(td_tags) >= 2:  # Ensure it’s a valid class row
-                    period = td_tags[0].get_text(strip=True)
-                    subject = td_tags[1].get_text(strip=True)
-                    # Skip non-class periods like Lunch or Break
-                    if "Lunch" not in period and "Break" not in period:
-                        flat_entries.append({
-                            "Day": day_name,
-                            "Period": period,
-                            "Subject": subject
-                        })
-
-        # === 6. Group Entries by Day ===
-        grouped = {}
-        for entry in flat_entries:
-            day = entry["Day"]
-            if day not in grouped:
-                grouped[day] = []
-            grouped[day].append({
+        await page.wait_for_timeout(5000)
+        await page.goto(TIME_TABLE_URL)
+        await page.wait_for_timeout(5000)
+        timetable = await fetch_timetable(page)
+        await browser.close()
+        grouped_timetable = {}
+        for entry in timetable:
+            day = entry['Day']
+            if day not in grouped_timetable:
+                grouped_timetable[day] = []
+            grouped_timetable[day].append({
                 "Period": entry["Period"],
                 "Subject": entry["Subject"]
             })
-
-        result = [{"Day": dname, "DayData": dlist} for dname, dlist in grouped.items()]
-
-        await browser.close()
-        return result
+        days_array = []
+        for day, data in grouped_timetable.items():
+            days_array.append({
+                "Day": day,
+                "DayData": data
+            })
+        return days_array

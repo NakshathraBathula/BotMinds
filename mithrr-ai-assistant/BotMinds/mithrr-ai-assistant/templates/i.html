@@ -736,7 +736,6 @@
     let storedResultsPassword = "";
     let storedTimetableMobile = "";
     let storedTimetablePassword = "";
-    let chatHistory = [];
 
     const chatWindow = document.getElementById("chatWindow");
     const userInput = document.getElementById("userInput");
@@ -1034,28 +1033,18 @@
           body: JSON.stringify({ query: typedValue })
         });
         const data = await response.json();
-       if (response.ok) {
-        if (data.response) {
-          const rawResponse = data.response.trim();
-          const formatted = formatResponse(rawResponse);
-          typingIndicator.remove();
-          appendMessage("bot", formatted, true);
-      }   else {
-          typingIndicator.remove();
-          appendMessage("bot", "No response received.");
+        typingIndicator.remove();
+        const rawResponse = data.response ? data.response.trim() : "No response received.";
+        const formatted = formatResponse(rawResponse);
+        appendMessage("bot", formatted, true);
+      } catch (error) {
+        typingIndicator.remove();
+        console.error("Error during backend call:", error);
+        appendMessage("bot", "Sorry, there was an error processing your request.");
+      } finally {
+        sendButton.disabled = false;
       }
-    } else {
-      typingIndicator.remove();
-      appendMessage("bot", data.error || "Unknown error occurred.");
     }
-  } catch (error) {
-    typingIndicator.remove();
-    console.error("Error during backend call:", error);
-    appendMessage("bot", "Sorry, there was an error processing your request.");
-  } finally {
-    sendButton.disabled = false;
-  }
-}
 
     sendButton.addEventListener("click", handleSend);
     userInput.addEventListener("keydown", (e) => { if (e.key === "Enter") handleSend(); });
@@ -1345,8 +1334,17 @@
     }
 
     function updateChatHistory(message) {
-  chatHistory.unshift({ message, timestamp: new Date().toLocaleTimeString() });
-} 
+      const historyDiv = document.createElement("div");
+      historyDiv.style.padding = "12px";
+      historyDiv.style.background = "var(--background-color)";
+      historyDiv.style.borderRadius = "8px";
+      historyDiv.style.cursor = "pointer";
+      historyDiv.innerHTML = `
+        <div style="font-weight: 500;">${message}</div>
+        <div style="font-size: 12px; color: var(--text-light);">Just now</div>
+      `;
+      secondarySidebarContent.prepend(historyDiv);
+    }
 
     function linkify(text) {
   const urlPattern = /(https?:\/\/[^"]+)/gi;
@@ -1355,107 +1353,95 @@
   });
 }
 
-   function handleNavItemClick(item) {
-  // Always close the secondary sidebar first
-  secondarySidebar.classList.remove('active');
-  
-  // Remove 'active' class from all navigation items
-  navItems.forEach(navItem => navItem.classList.remove('active'));
-  
-  // Add 'active' class to the clicked navigation item
-  item.classList.add('active');
-  
-  // Add 'collapsed' class to the main sidebar
-  sidebar.classList.add('collapsed');
-  
-  // Get the title of the clicked navigation item
-  const title = item.querySelector('.nav-text').textContent;
-  
-  // Check if the item is one that should not open the sidebar
-  if (title === "Attendance" || title === "Results" || title === "Timetables") {
-    // Call the corresponding flow function without opening the sidebar
-    if (title === "Attendance") {
-      startAttendanceFlow();
-    } else if (title === "Results") {
-      startResultsFlow();
-    } else if (title === "Timetables") {
-      startTimetableFlow();
-    }
-  } else {
-    // For other items, open the sidebar and load content
-    secondarySidebarTitle.textContent = title;
-    secondarySidebar.classList.add('active');
-    loadSecondarySidebarContent(title);
-  }
-}
-    function loadSecondarySidebarContent(title) {
-  secondarySidebarContent.innerHTML = '';
-  secondarySidebarContent.innerHTML = `
-    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-      <div class="typing-indicator">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
-    </div>
-  `;
+    function handleNavItemClick(item) {
+      navItems.forEach(navItem => navItem.classList.remove('active'));
+      item.classList.add('active');
+      sidebar.classList.add('collapsed');
+      const title = item.querySelector('.nav-text').textContent;
+      secondarySidebarTitle.textContent = title;
 
-  setTimeout(() => {
-    let content = '';
-    switch(title) {
-      case 'Chat History':
-        content = `
-          <div style="padding: 16px;">
-            <h3 style="margin-bottom: 16px;">Recent Conversations</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              ${chatHistory.slice(0, 10).map(item => `
-                <div style="padding: 12px; background: var(--background-color); border-radius: 8px; cursor: pointer;">
-                  <div style="font-weight: 500;">${item.message}</div>
-                  <div style="font-size: 12px; color: var(--text-light);">${item.timestamp}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-        break;
-      case 'Bulletins':
-        fetch(ngrokurl + "/news_bulletins")
-          .then(response => response.json())
-          .then(data => {
-            if (Array.isArray(data) && data.length > 0) {
-              content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
-            } else {
-              content = `<div style="padding: 16px;">No bulletins available.</div>`;
-            }
-            secondarySidebarContent.innerHTML = content;
-          })
-          .catch(error => {
-            console.error("Error fetching bulletins:", error);
-            secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading bulletins.</div>`;
-          });
-        return;
-      case 'Exam Notifications':
-        fetch(ngrokurl + "/exam_notifications")
-          .then(response => response.json())
-          .then(data => {
-            if (Array.isArray(data) && data.length > 0) {
-              content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
-            } else {
-              content = `<div style="padding: 16px;">No notifications available.</div>`;
-            }
-            secondarySidebarContent.innerHTML = content;
-          })
-          .catch(error => {
-            console.error("Error fetching notifications:", error);
-            secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading notifications.</div>`;
-          });
-        return;
-      default:
-        content = `<div style="padding: 16px;">Content for ${title}</div>`;
+      if (title === "Attendance") {
+        startAttendanceFlow();
+      } else if (title === "Results") {
+        startResultsFlow();
+      } else if (title === "Timetables") {
+        startTimetableFlow();
+      }
+
+      secondarySidebar.classList.add('active');
+      loadSecondarySidebarContent(title);
     }
-    secondarySidebarContent.innerHTML = content;
-  }, 500);
-}
+
+    function loadSecondarySidebarContent(title) {
+      secondarySidebarContent.innerHTML = '';
+      secondarySidebarContent.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+          <div class="typing-indicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+      `;
+
+      setTimeout(() => {
+        let content = '';
+        switch(title) {
+          case 'Chat History':
+            content = `
+              <div style="padding: 16px;">
+                <h3 style="margin-bottom: 16px;">Recent Conversations</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <div style="padding: 12px; background: var(--background-color); border-radius: 8px; cursor: pointer;">
+                    <div style="font-weight: 500;">Attendance Query</div>
+                    <div style="font-size: 12px; color: var(--text-light);">2 minutes ago</div>
+                  </div>
+                  <div style="padding: 12px; background: var(--background-color); border-radius: 8px; cursor: pointer;">
+                    <div style="font-weight: 500;">Results Discussion</div>
+                    <div style="font-size: 12px; color: var(--text-light);">1 hour ago</div>
+                  </div>
+                </div>
+              </div>
+            `;
+            break;
+          case 'Bulletins':
+            fetch(ngrokurl + "/news_bulletins")
+              .then(response => response.json())
+              .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                  content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
+                } else {
+                  content = `<div style="padding: 16px;">No bulletins available.</div>`;
+                }
+                secondarySidebarContent.innerHTML = content;
+              })
+              .catch(error => {
+                console.error("Error fetching bulletins:", error);
+                secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading bulletins.</div>`;
+              });
+            return;
+          case 'Exam Notifications':
+            fetch(ngrokurl + "/exam_notifications")
+              .then(response => response.json())
+              .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                  content = data.map(item => `<div style="padding: 12px; background: var(--background-color); border-radius: 8px; margin-bottom: 8px;">${linkify(item)}</div>`).join('');
+                } else {
+                  content = `<div style="padding: 16px;">No notifications available.</div>`;
+                }
+                secondarySidebarContent.innerHTML = content;
+              })
+              .catch(error => {
+                console.error("Error fetching notifications:", error);
+                secondarySidebarContent.innerHTML = `<div style="padding: 16px;">Error loading notifications.</div>`;
+              });
+            return;
+          default:
+            content = `<div style="padding: 16px;">Content for ${title}</div>`;
+        }
+        secondarySidebarContent.innerHTML = content;
+      }, 500);
+    }
 
     navItems.forEach(item => {
       item.addEventListener('click', () => handleNavItemClick(item));

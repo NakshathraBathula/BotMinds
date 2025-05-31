@@ -5,9 +5,14 @@
         "tables": []
     },
     {
+        "url": "https://www.kmit.in/admissions/fee-structure",
+        "content": "B.Tech (four year duration) Fee Structure for Year of Admission 2024-25:\n\nTuition Fee:\n- ₹103,000 per year (for all 4 years)\n\nSpecial Fee:\n- ₹5,500 in 1st year (2024-25)\n- ₹2,500 in 2nd, 3rd, and 4th years (2025-28)\n\nNBA Fee:\n- ₹3,000 per year for all 4 years\n\nTotal First Year Fee (2024-25): ₹103,000 (tuition) + ₹5,500 (special) + ₹3,000 (NBA) = ₹111,500\n\nTotal Fee per year (from 2nd year onwards): ₹103,000 + ₹2,500 + ₹3,000 = ₹108,500\n\nFor more information, visit the official site: https://www.kmit.in/admissions/fee-structure or contact the Admissions Department at 6302140205."
+      },           
+    {
         "url": "https://www.kmit.in/department/it/timetable_ps2_1.php",
         "content": "B.Tech II Year II Sem IT department - Section PS2-1 Tentative TimeTable for A.Y: 2024-25\n\nTable 1: Timetable\n| DAY/TIME | 09:30-10:20 | 10:20-11:10 | 11:10-11:25 | 11:25-12:15 | 12:15-01:05 | 01:05-02:00 | 02:00-02:50 | 02:50-03:40 | 03:40-04:30 |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| MON | ML | ACD | BREAK | DS | OS | LUNCH | DS | RTRP | |\n| TUE | COMP | OS | BREAK | ML LAB(FS-9)/DS LAB(FS-8) |  | LUNCH | ACD | RTRP | |\n| WED | DS LAB(FS-8A)/OS LAB(FS-8B) |  | BREAK | ACD | COMP | LUNCH | OS | RTRP | |\n| THU | DS | ML | BREAK | COMP |  | LUNCH | OS | RTRP | |\n| FRI | LAB(FS-8) |  | BREAK | COMP | ACD | LUNCH | ML | RTRP | |\n| SAT | DS | OS | BREAK | ML | ACD | LUNCH | COMP | RTRP | |\n\nTable 2: Faculty Details\n| S.NO | SUBJECT | NAME OF THE FACULTY |\n| --- | --- | --- |\n| 1 | DATA STRUCTURES | Ms PRATYUSHA |\n| 2 | OPERATING SYSTEMS | Mr R NARENDER |\n| 3 | AUTOMATA THEORY AND COMPILER DESIGN | Dr YOGITHA PATIL |\n| 4 | COMPUTER ORGANIZATION AND MICROPROCESSOR | Ms C ROHINI |\n| 5 | MACHINE LEARNING | Ms SRI RANJANI |\n| 6 | DATA STRUCTURES LAB | Ms PRATYUSHA |\n| 7 | OPERATING SYSTEMS LAB | Mr R NARENDER |\n| 8 | MACHINE LEARNING LAB | Ms SRI RANJANI |\n| 9 | REAL TIME PROJECT RESEARCH |  |\n| 10 | CLASS TEACHER | Mr C.VIKAS |"
     },
+    
     
     {
          "url": "https://www.kmit.in/department/it/timetable_ps1.php",

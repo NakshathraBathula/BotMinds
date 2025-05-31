@@ -1,0 +1,13 @@
+# requirements.txt
+flask
+flask-cors
+python-dotenv
+pyngrok
+nest-asyncio
+playwright
+beautifulsoup4
+requests
+google-generativeai
+sentence-transformers
+faiss-cpu
+torch

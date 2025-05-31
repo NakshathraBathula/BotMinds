@@ -4,6 +4,7 @@ from flask_cors import CORS
 from pyngrok import ngrok
 import os
 import asyncio
+import torch
 from dotenv import load_dotenv
 import requests
 from services.firebase_service2 import update_firebase
@@ -23,6 +24,8 @@ from ai_handlers.response_handler import (
 from ai_handlers.memory_manager import user_memory, user_memory_lock
 
 load_dotenv()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
@@ -159,7 +162,7 @@ def timetable():
 
 
 if __name__ == "__main__":
-    ngrok.set_auth_token("2vE70uA4Iy5uUSAFTCY2GzmWSSg_3i2rTxaFbHJc4AJaUQsua")
+    ngrok.set_auth_token("2xoHibZzZvAM0FmIUTcVUvNm1L9_7mekWhw2f5oj1w1baX5gD")
     public_url = ngrok.connect(5000).public_url
     update_firebase(public_url)
 
